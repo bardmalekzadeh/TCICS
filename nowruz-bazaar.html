@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nowruz Bazaar 2025 - Booth Sponsorship</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+        
+        .booth-btn {
+            cursor: pointer;
+            transition: all 0.2s;
+            position: absolute;
+            border: 0.5px solid rgba(0, 0, 0, 0.3);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .booth-btn:hover {
+            background-color: #000000 !important;
+            color: #FFFFFF !important;
+            border-color: #000000;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .booth-btn.selected {
+            background-color: #2563eb !important;
+            color: #FFFFFF !important;
+            border-color: #1d4ed8;
+            border-width: 2px;
+            z-index: 99;
+        }
+        
+        #map-container {
+            cursor: grab;
+            overflow: hidden;
+            position: relative;
+            background: #f3f4f6;
+            touch-action: none;
+        }
+        
+        #map-container:active {
+            cursor: grabbing;
+        }
+        
+        #map-wrapper {
+            transform-origin: 0 0;
+            transition: transform 0.1s ease-out;
+        }
+        
+        .zoom-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+            color: #374151;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+        }
+        
+        .zoom-btn:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+        
+        .zoom-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .modal { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.5); 
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active { 
+            display: flex;
+        }
+        
+        .zoom-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #6b7280;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 200;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <div class="min-h-screen">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-8">
+            <div class="container mx-auto px-4">
+                <a href="index.html" class="mb-4 text-white hover:text-blue-200 transition inline-block">
+                    ← Back to Home
+                </a>
+                <h1 class="text-4xl font-bold mb-2">Nowruz Bazaar 2025</h1>
+                <div class="flex flex-wrap gap-4 text-lg">
+                    <div>📅 March 15, 2025</div>
+                    <div>📍 2150 Wilson Ave, Port Coquitlam</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container mx-auto px-4 py-8">
+            <!-- Interactive Map -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <div class="mb-4 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Select Your Booth</h2>
+                        <p class="text-gray-600">انتخاب غرفه - Use zoom controls and click on any booth</p>
+                    </div>
+                    <div class="text-right text-sm text-gray-600">
+                        <div>💡 <strong>Zoom:</strong> Use +/- buttons or scroll</div>
+                        <div>👆 <strong>Pan:</strong> Click and drag the map</div>
+                    </div>
+                </div>
+                
+                <div id="map-container" class="relative w-full bg-gray-100 rounded-lg overflow-hidden shadow-inner" style="height: 800px;">
+                    <!-- Zoom Controls -->
+                    <div class="zoom-controls">
+                        <button class="zoom-btn" onclick="zoomIn()">+</button>
+                        <button class="zoom-btn" onclick="zoomReset()">⊙</button>
+                        <button class="zoom-btn" onclick="zoomOut()">−</button>
+                    </div>
+                    
+                    <!-- Zoom Info -->
+                    <div class="zoom-info">
+                        Zoom: <span id="zoom-level">100%</span>
+                    </div>
+                    
+                    <div id="map-wrapper" style="position: relative; width: 100%; transform-origin: 0 0;">
+                        <img src="https://files.catbox.moe/o7h4zc.png" alt="Nowruz Bazaar Floor Plan" class="w-full h-auto" id="mapImage" draggable="false">
+                        <div id="booths-overlay" style="position: absolute; inset: 0;"></div>
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded" style="background: rgba(59, 130, 246, 0.5); border: 0.5px solid rgba(0,0,0,0.3);"></div>
+                        <span>VIP Hall / Main Hall</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded" style="background: rgba(34, 197, 94, 0.5); border: 0.5px solid rgba(0,0,0,0.3);"></div>
+                        <span>Tables</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded" style="background: rgba(234, 179, 8, 0.5); border: 0.5px solid rgba(0,0,0,0.3);"></div>
+                        <span>Pavilion</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded" style="background: rgba(255, 255, 255, 0.8); border: 0.5px solid rgba(0,0,0,0.3);"></div>
+                        <span>Outdoor Tents</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booth Explanations -->
+            <div class="grid md:grid-cols-2 gap-6 mb-8">
+                <div class="bg-blue-50 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-blue-900 mb-3">📍 Booth Categories</h3>
+                    <div class="space-y-2 text-sm text-gray-700">
+                        <div><strong>M Series (M1-M10):</strong> VIP Hall Main Booths - Premium indoor locations - $1,799</div>
+                        <div><strong>L Series (L1-L17):</strong> Main Hall Booths - High-traffic areas - $1,599-$1,799</div>
+                        <div><strong>A Series (A1-A11):</strong> Pavilion Booths - Semi-outdoor covered area - $1,999-$2,199</div>
+                        <div><strong>T Series (T1-T56):</strong> Tables - VIP circular tables ($1,599) & Main hall tables ($599-$799)</div>
+                        <div><strong>V Series (V1-V10):</strong> Outdoor Tents - Weather-protected outdoor spaces - $1,499</div>
+                        <div><strong>S Series (S1-S5):</strong> Standing Tables - High-visibility cocktail tables - $399</div>
+                    </div>
+                </div>
+
+                <div class="bg-green-50 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-green-900 mb-3">✨ Additional Marketing Opportunities</h3>
+                    <div class="space-y-2 text-sm text-gray-700">
+                        <div><strong>LED Video Screen Advertisement:</strong> $499 - Display your brand on our main screens</div>
+                        <div><strong>MC Audio Advertisement:</strong> $499 - Live announcements throughout the event</div>
+                        <div><strong>Drawing Sponsor:</strong> $599 - Associate your brand with prize giveaways</div>
+                        <div><strong>Small Banner (3x6 ft):</strong> $399 - Strategic placement in high-traffic areas</div>
+                        <div><strong>Large Banner (6x10 ft):</strong> $799 - Premium visibility for maximum impact</div>
+                    </div>
+                    <p class="mt-4 text-xs text-gray-600 italic">💡 Combine booth + marketing for maximum ROI!</p>
+                </div>
+            </div>
+
+            <!-- Important Information -->
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700">
+                            <strong>⏰ Important Deadline:</strong> All sponsorship applications and payments must be submitted by <strong>February 1, 2025</strong>. Space is limited and booths are assigned on a first-come, first-served basis.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Info -->
+            <div class="mt-8 bg-blue-50 rounded-xl p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4">Contact Information</h2>
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div>
+                        <p class="font-semibold text-gray-700">Marketing Team:</p>
+                        <p class="text-gray-600">778-888-9373 | 778-888-7472</p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Email:</p>
+                        <p class="text-gray-600">marketing.tcic@gmail.com</p>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-700">Deadline:</p>
+                        <p class="text-red-600 font-semibold">February 1, 2025</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="boothModal" class="modal">
+        <div class="bg-white rounded-xl max-w-md w-full p-8 relative mx-4 shadow-2xl">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl">✕</button>
+            <h3 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-4"></h3>
+            <div id="modalContent" class="space-y-3 mb-6"></div>
+            <button onclick="proceedToPayment()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
+                Proceed to Payment
+            </button>
+            <p class="text-xs text-gray-500 text-center mt-3">You'll receive contract and instructions via email</p>
+        </div>
+    </div>
+
+    <script>
+const nowruzBooths = [
+    { id: 'A1', x: 42.31, y: 84.28, w: 2.62, h: 4.69, rotation: -3.69, color: 'yellow' },
+    { id: 'A2', x: 47.84, y: 83.47, w: 2.71, h: 4.85, rotation: -6.04, color: 'yellow' },
+    { id: 'A3', x: 52.99, y: 83.55, w: 0.66, h: 2.94, color: 'yellow' },
+    { id: 'A4', x: 52.99, y: 80.28, w: 0.66, h: 2.94, color: 'yellow' },
+    { id: 'A5', x: 52.99, y: 77.02, w: 0.66, h: 2.94, color: 'yellow' },
+    { id: 'A6', x: 39.45, y: 76.57, w: 0.66, h: 2.94, color: 'yellow' },
+    { id: 'A7', x: 39.45, y: 79.84, w: 0.66, h: 2.94, color: 'yellow' },
+    { id: 'A8', x: 39.45, y: 83.11, w: 0.66, h: 2.94, color: 'yellow' },
+    { id: 'A9', x: 39.45, y: 86.37, w: 0.66, h: 2.94, color: 'yellow' },
+    { id: 'A10', x: 45.06, y: 76.1, w: 1.69, h: 1.21, color: 'yellow' },
+    { id: 'A11', x: 46.9, y: 76.12, w: 1.69, h: 1.21, color: 'yellow' },
+    { id: 'L1', x: 87.17, y: 83.05, w: 3.6, h: 6.45, rotation: 10.91, color: 'blue' },
+    { id: 'L2', x: 87.79, y: 77.33, w: 3.6, h: 6.45, rotation: 10.91, color: 'blue' },
+    { id: 'L3', x: 88.39, y: 71.66, w: 3.6, h: 6.45, rotation: 10.91, color: 'blue' },
+    { id: 'L4', x: 89.01, y: 65.93, w: 3.6, h: 6.45, rotation: 10.91, color: 'blue' },
+    { id: 'L5', x: 89.62, y: 60.21, w: 3.6, h: 6.45, rotation: 10.91, color: 'blue' },
+    { id: 'L6', x: 86.51, y: 50.74, w: 3.52, h: 6.3, rotation: 9.02, color: 'blue' },
+    { id: 'L7', x: 83.3, y: 49.82, w: 3.52, h: 6.3, rotation: 9.02, color: 'blue' },
+    { id: 'L8', x: 80.09, y: 48.94, w: 3.51, h: 6.29, rotation: 8.98, color: 'blue' },
+    { id: 'L9', x: 76.87, y: 48.03, w: 3.51, h: 6.29, rotation: 8.98, color: 'blue' },
+    { id: 'L10', x: 73.69, y: 47.14, w: 3.51, h: 6.29, rotation: 8.98, color: 'blue' },
+    { id: 'L11', x: 70.48, y: 46.23, w: 3.51, h: 6.29, rotation: 8.98, color: 'blue' },
+    { id: 'L12', x: 67.26, y: 45.32, w: 3.51, h: 6.29, rotation: 8.98, color: 'blue' },
+    { id: 'L13', x: 61.95, y: 48.65, w: 3.61, h: 6.46, rotation: 11.13, color: 'blue' },
+    { id: 'L14', x: 61.32, y: 54.36, w: 3.61, h: 6.46, rotation: 11.13, color: 'blue' },
+    { id: 'L15', x: 60.7, y: 60.08, w: 3.61, h: 6.46, rotation: 11.13, color: 'blue' },
+    { id: 'L16', x: 60.07, y: 65.8, w: 3.61, h: 6.46, rotation: 11.13, color: 'blue' },
+    { id: 'L17', x: 59.18, y: 74.96, w: 3.61, h: 6.46, rotation: 11.13, color: 'blue' },
+    { id: 'M1', x: 51.79, y: 65.95, w: 3.07, h: 5.5, color: 'blue' },
+    { id: 'M2', x: 51.79, y: 60.12, w: 3.07, h: 5.5, color: 'blue' },
+    { id: 'M3', x: 51.79, y: 54.3, w: 3.07, h: 5.5, color: 'blue' },
+    { id: 'M4', x: 51.79, y: 48.47, w: 3.07, h: 5.5, color: 'blue' },
+    { id: 'M5', x: 48.23, y: 44.08, w: 3.07, h: 5.5, color: 'blue' },
+    { id: 'M6', x: 44.97, y: 44.08, w: 3.07, h: 5.5, color: 'blue' },
+    { id: 'M7', x: 41.72, y: 44.08, w: 3.07, h: 5.5, color: 'blue' },
+    { id: 'M8', x: 38.26, y: 55.59, w: 3.07, h: 5.5, color: 'blue' },
+    { id: 'M9', x: 38.26, y: 61.42, w: 3.07, h: 5.5, color: 'blue' },
+    { id: 'M10', x: 38.26, y: 67.25, w: 3.07, h: 5.5, color: 'blue' },
+    { id: 'S1', x: 74.01, y: 63.92, w: 0.99, h: 1.77, color: 'green' },
+    { id: 'S2', x: 74.97, y: 64.27, w: 0.99, h: 1.77, color: 'green' },
+    { id: 'S3', x: 75.92, y: 64.6, w: 0.99, h: 1.77, color: 'green' },
+    { id: 'S4', x: 76.87, y: 64.92, w: 0.99, h: 1.77, color: 'green' },
+    { id: 'S5', x: 77.83, y: 65.3, w: 0.99, h: 1.77, color: 'green' },
+    { id: 'T1', x: 47.6, y: 70.04, w: 1.23, h: 2.21, color: 'blue_circle' },
+    { id: 'T2', x: 47.6, y: 67.27, w: 1.23, h: 2.21, color: 'blue_circle' },
+    { id: 'T3', x: 47.6, y: 64.51, w: 1.23, h: 2.21, color: 'blue_circle' },
+    { id: 'T4', x: 47.6, y: 61.74, w: 1.23, h: 2.21, color: 'blue_circle' },
+    { id: 'T5', x: 47.6, y: 58.98, w: 1.23, h: 2.21, color: 'blue_circle' },
+    { id: 'T6', x: 47.6, y: 56.21, w: 1.23, h: 2.21, color: 'blue_circle' },
+    { id: 'T7', x: 47.6, y: 53.44, w: 1.23, h: 2.21, color: 'blue_circle' },
+    { id: 'T8', x: 44.17, y: 53.44, w: 1.23, h: 2.21, color: 'blue_circle' },
+    { id: 'T9', x: 44.17, y: 56.21, w: 1.23, h: 2.21, color: 'blue_circle' },
+    { id: 'T10', x: 44.17, y: 58.98, w: 1.23, h: 2.21, color: 'blue_circle' },
+    { id: 'T11', x: 44.17, y: 61.74, w: 1.23, h: 2.21, color: 'blue_circle' },
+    { id: 'T12', x: 44.17, y: 64.51, w: 1.23, h: 2.21, color: 'blue_circle' },
+    { id: 'T13', x: 44.17, y: 67.27, w: 1.23, h: 2.21, color: 'blue_circle' },
+    { id: 'T14', x: 44.17, y: 70.04, w: 1.23, h: 2.21, color: 'blue_circle' },
+    { id: 'T1', x: 81.59, y: 84.37, w: 0.88, h: 2.64, rotation: -80.68, color: 'green' },
+    { id: 'T2', x: 81.81, y: 82.02, w: 0.88, h: 2.64, rotation: -80.68, color: 'green' },
+    { id: 'T3', x: 81.33, y: 80.61, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T4', x: 79.97, y: 80.22, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T5', x: 78.6, y: 79.84, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T6', x: 78.38, y: 81.05, w: 0.92, h: 2.65, rotation: -80.68, color: 'green' },
+    { id: 'T7', x: 70.89, y: 78.99, w: 0.88, h: 2.64, rotation: -80.68, color: 'green' },
+    { id: 'T8', x: 70.42, y: 77.58, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T9', x: 69.05, y: 77.19, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T10', x: 67.69, y: 76.81, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T11', x: 67.47, y: 78.01, w: 0.92, h: 2.65, rotation: -80.68, color: 'green' },
+    { id: 'T12', x: 67.26, y: 80.46, w: 0.9, h: 2.56, rotation: -80.68, color: 'green' },
+    { id: 'T13', x: 71.3, y: 68.22, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T14', x: 69.94, y: 67.83, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T15', x: 68.58, y: 67.45, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T16', x: 68.68, y: 65.1, w: 0.9, h: 2.56, rotation: -80.68, color: 'green' },
+    { id: 'T17', x: 68.88, y: 62.65, w: 0.92, h: 2.65, rotation: -80.68, color: 'green' },
+    { id: 'T18', x: 69.1, y: 61.45, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T19', x: 70.47, y: 61.83, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T20', x: 71.83, y: 62.21, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T21', x: 72.31, y: 63.63, w: 0.88, h: 2.64, rotation: -80.68, color: 'green' },
+    { id: 'T22', x: 72.09, y: 65.98, w: 0.88, h: 2.64, rotation: -80.68, color: 'green' },
+    { id: 'T23', x: 82.28, y: 71.37, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T24', x: 80.91, y: 70.98, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T25', x: 79.55, y: 70.6, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T26', x: 79.65, y: 68.24, w: 0.9, h: 2.56, rotation: -80.68, color: 'green' },
+    { id: 'T27', x: 79.86, y: 65.8, w: 0.92, h: 2.65, rotation: -80.68, color: 'green' },
+    { id: 'T28', x: 80.08, y: 64.6, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T29', x: 81.44, y: 64.98, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T30', x: 82.8, y: 65.36, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T31', x: 83.28, y: 66.77, w: 0.88, h: 2.64, rotation: -80.68, color: 'green' },
+    { id: 'T32', x: 83.07, y: 69.13, w: 0.88, h: 2.64, rotation: -80.68, color: 'green' },
+    { id: 'T33', x: 83.03, y: 62.86, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T34', x: 81.67, y: 62.48, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T35', x: 80.31, y: 62.1, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T36', x: 78.94, y: 61.71, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T37', x: 77.58, y: 61.33, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T38', x: 76.22, y: 60.95, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T39', x: 74.85, y: 60.57, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T40', x: 73.49, y: 60.18, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T41', x: 72.13, y: 59.8, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T42', x: 70.76, y: 59.42, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T43', x: 69.4, y: 59.03, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T44', x: 69.51, y: 56.62, w: 0.91, h: 2.64, rotation: -80.68, color: 'green' },
+    { id: 'T45', x: 69.73, y: 55.41, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T46', x: 71.09, y: 55.8, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T47', x: 72.45, y: 56.18, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T48', x: 73.82, y: 56.56, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T49', x: 75.18, y: 56.95, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T50', x: 76.54, y: 57.33, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T51', x: 77.91, y: 57.71, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T52', x: 79.27, y: 58.09, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T53', x: 80.63, y: 58.48, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T54', x: 82.0, y: 58.86, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T55', x: 83.36, y: 59.24, w: 1.47, h: 1.62, rotation: 8.97, color: 'green' },
+    { id: 'T56', x: 83.82, y: 60.65, w: 0.91, h: 2.64, rotation: -80.68, color: 'green' },
+    { id: 'V1', x: 11.86, y: 95.94, w: 6.26, h: 4.06, color: 'white' },
+    { id: 'V2', x: 19.74, y: 95.94, w: 6.26, h: 4.06, color: 'white' },
+    { id: 'V3', x: 27.78, y: 95.94, w: 6.26, h: 4.06, color: 'white' },
+    { id: 'V4', x: 35.66, y: 95.94, w: 6.26, h: 4.06, color: 'white' },
+    { id: 'V5', x: 43.63, y: 95.94, w: 6.26, h: 4.06, color: 'white' },
+    { id: 'V6', x: 51.51, y: 95.94, w: 6.26, h: 4.06, color: 'white' },
+    { id: 'V7', x: 59.54, y: 95.94, w: 6.26, h: 4.06, color: 'white' },
+    { id: 'V8', x: 67.43, y: 95.94, w: 6.26, h: 4.06, color: 'white' },
+    { id: 'V9', x: 75.44, y: 95.94, w: 6.26, h: 4.06, color: 'white' },
+    { id: 'V10', x: 83.33, y: 95.94, w: 6.26, h: 4.06, color: 'white' }
+];
+
+const boothPricing = {
+    M: { name: 'VIP Hall Main Booths', price: '$1,799' },
+    L: { name: 'Main Hall Booths', ranges: {'1-4': '$1,799', '5-17': '$1,599'} },
+    A: { name: 'Pavilion Booths', ranges: {'1-2': '$2,199', '3-11': '$1,999'} },
+    T: { name: 'Tables', ranges: {'1-14': '$1,599 (VIP Circular)', '15-56': '$599-$799'} },
+    V: { name: 'Outdoor Tents', price: '$1,499' },
+    S: { name: 'Standing Tables', price: '$399' }
+};
+
+// Zoom and pan state
+let currentZoom = 1;
+let currentX = 0;
+let currentY = 0;
+let isDragging = false;
+let startX, startY;
+let selectedBooth = null;
+
+function getBoothColor(booth) {
+    const colors = {
+        blue: 'rgba(59, 130, 246, 0.5)',
+        blue_circle: 'rgba(59, 130, 246, 0.5)',
+        green: 'rgba(34, 197, 94, 0.5)',
+        yellow: 'rgba(234, 179, 8, 0.5)',
+        white: 'rgba(255, 255, 255, 0.8)'
+    };
+    return colors[booth.color] || colors.blue;
+}
+
+function renderBooths() {
+    const overlay = document.getElementById('booths-overlay');
+    overlay.innerHTML = '';
+    
+    nowruzBooths.forEach(booth => {
+        const btn = document.createElement('button');
+        btn.className = 'booth-btn';
+        btn.dataset.boothId = booth.id;
+        
+        btn.style.left = `${booth.x}%`;
+        btn.style.top = `${booth.y}%`;
+        btn.style.width = `${booth.w}%`;
+        btn.style.height = `${booth.h}%`;
+        btn.style.background = getBoothColor(booth);
+        btn.style.color = '#000';
+        
+        // Font sizes
+        if (booth.id.startsWith('T') || booth.id.startsWith('S')) {
+            btn.style.fontSize = 'clamp(4px, 0.35vw, 6px)';
+        } else if (booth.id === 'A10' || booth.id === 'A11') {
+            btn.style.fontSize = 'clamp(6px, 0.6vw, 9px)';
+        } else {
+            btn.style.fontSize = 'clamp(8px, 1vw, 14px)';
+        }
+        
+        // Apply rotation
+        if (booth.rotation && booth.rotation !== 0) {
+            btn.style.transform = `rotate(${booth.rotation}deg)`;
+            btn.style.transformOrigin = 'center center';
+        }
+        
+        // Circles
+        if (booth.color === 'blue_circle' || booth.id.startsWith('S')) {
+            btn.style.borderRadius = '50%';
+        }
+        
+        btn.textContent = booth.id;
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            selectBooth(booth);
+        };
+        overlay.appendChild(btn);
+    });
+}
+
+function selectBooth(booth) {
+    // Remove previous selection
+    document.querySelectorAll('.booth-btn').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    
+    // Add selection to clicked booth
+    const buttons = document.querySelectorAll(`[data-booth-id="${booth.id}"]`);
+    buttons.forEach(btn => btn.classList.add('selected'));
+    
+    selectedBooth = booth;
+    showBoothDetails(booth);
+}
+
+function showBoothDetails(booth) {
+    const modal = document.getElementById('boothModal');
+    const title = document.getElementById('modalTitle');
+    const content = document.getElementById('modalContent');
+    
+    const prefix = booth.id.match(/[A-Z]+/)[0];
+    const number = parseInt(booth.id.match(/\d+/)[0]);
+    const boothInfo = boothPricing[prefix];
+    
+    let price = boothInfo.price;
+    if (boothInfo.ranges) {
+        for (let range in boothInfo.ranges) {
+            const [start, end] = range.split('-').map(n => parseInt(n));
+            if (number >= start && number <= (end || start)) {
+                price = boothInfo.ranges[range];
+                break;
+            }
+        }
+    }
+    
+    title.textContent = `Booth ${booth.id}`;
+    content.innerHTML = `
+        <p class="text-gray-700"><strong>Location:</strong> ${boothInfo.name}</p>
+        <p class="text-gray-700"><strong>Price:</strong> <span class="text-blue-600 font-bold text-xl">${price}</span></p>
+        <p class="text-gray-700"><strong>Event:</strong> Nowruz Bazaar 2025</p>
+        <p class="text-gray-700"><strong>Date:</strong> March 15, 2025</p>
+        <p class="text-gray-700"><strong>Venue:</strong> 2150 Wilson Ave, Port Coquitlam, BC V3C 6J5</p>
+        <hr class="my-3">
+        <p class="text-sm text-gray-600"><strong>Additional Marketing Options:</strong></p>
+        <ul class="text-sm list-disc ml-5 space-y-1 text-gray-600">
+            <li>LED Video Screen: $499</li>
+            <li>MC Audio Advertisement: $499</li>
+            <li>Drawing Sponsor: $599</li>
+            <li>Small Banner: $399</li>
+            <li>Large Banner: $799</li>
+        </ul>
+        <p class="text-xs text-gray-500 mt-3">Contact: 778-888-9373 | marketing.tcic@gmail.com</p>
+    `;
+    
+    modal.classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('boothModal').classList.remove('active');
+}
+
+function proceedToPayment() {
+    if (selectedBooth) {
+        alert(`Processing payment for Booth ${selectedBooth.id}. You will receive contract and instructions via email.`);
+        closeModal();
+    }
+}
+
+// Zoom functions
+function zoomIn() {
+    const oldZoom = currentZoom;
+    currentZoom = Math.min(currentZoom + 0.3, 3);
+    
+    // Adjust pan to zoom toward center
+    const container = document.getElementById('map-container');
+    const centerX = container.offsetWidth / 2;
+    const centerY = container.offsetHeight / 2;
+    
+    const scale = currentZoom / oldZoom;
+    currentX = centerX - (centerX - currentX) * scale;
+    currentY = centerY - (centerY - currentY) * scale;
+    
+    updateTransform();
+}
+
+function zoomOut() {
+    const oldZoom = currentZoom;
+    currentZoom = Math.max(currentZoom - 0.3, 1);
+    
+    if (currentZoom === 1) {
+        currentX = 0;
+        currentY = 0;
+    } else {
+        // Adjust pan when zooming out
+        const container = document.getElementById('map-container');
+        const centerX = container.offsetWidth / 2;
+        const centerY = container.offsetHeight / 2;
+        
+        const scale = currentZoom / oldZoom;
+        currentX = centerX - (centerX - currentX) * scale;
+        currentY = centerY - (centerY - currentY) * scale;
+    }
+    
+    updateTransform();
+}
+
+function zoomReset() {
+    currentZoom = 1;
+    currentX = 0;
+    currentY = 0;
+    updateTransform();
+}
+
+function updateTransform() {
+    const wrapper = document.getElementById('map-wrapper');
+    const container = document.getElementById('map-container');
+    
+    // Get actual dimensions
+    const wrapperWidth = wrapper.offsetWidth * currentZoom;
+    const wrapperHeight = wrapper.offsetHeight * currentZoom;
+    const containerWidth = container.offsetWidth;
+    const containerHeight = container.offsetHeight;
+    
+    // Apply bounds to prevent panning too far
+    const maxX = 0;
+    const minX = Math.min(0, containerWidth - wrapperWidth);
+    const maxY = 0;
+    const minY = Math.min(0, containerHeight - wrapperHeight);
+    
+    currentX = Math.max(minX, Math.min(maxX, currentX));
+    currentY = Math.max(minY, Math.min(maxY, currentY));
+    
+    wrapper.style.transform = `translate(${currentX}px, ${currentY}px) scale(${currentZoom})`;
+    document.getElementById('zoom-level').textContent = Math.round(currentZoom * 100) + '%';
+}
+
+// Pan functionality
+const container = document.getElementById('map-container');
+
+container.addEventListener('mousedown', (e) => {
+    if (!e.target.classList.contains('booth-btn')) {
+        isDragging = true;
+        startX = e.clientX - currentX;
+        startY = e.clientY - currentY;
+        container.style.cursor = 'grabbing';
+        e.preventDefault();
+    }
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+        currentX = e.clientX - startX;
+        currentY = e.clientY - startY;
+        updateTransform();
+    }
+});
+
+document.addEventListener('mouseup', () => {
+    if (isDragging) {
+        isDragging = false;
+        container.style.cursor = 'grab';
+    }
+});
+
+// Zoom with scroll wheel
+container.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    
+    const oldZoom = currentZoom;
+    
+    if (e.deltaY < 0) {
+        currentZoom = Math.min(currentZoom + 0.1, 3);
+    } else {
+        currentZoom = Math.max(currentZoom - 0.1, 1);
+    }
+    
+    if (currentZoom === 1) {
+        currentX = 0;
+        currentY = 0;
+    } else if (oldZoom !== currentZoom) {
+        // Zoom toward mouse position
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        const scale = currentZoom / oldZoom;
+        currentX = mouseX - (mouseX - currentX) * scale;
+        currentY = mouseY - (mouseY - currentY) * scale;
+    }
+    
+    updateTransform();
+});
+
+// Touch support for mobile
+let touchStartDistance = 0;
+let lastTouchX = 0;
+let lastTouchY = 0;
+
+container.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        touchStartDistance = Math.sqrt(dx * dx + dy * dy);
+    } else if (e.touches.length === 1) {
+        lastTouchX = e.touches[0].clientX;
+        lastTouchY = e.touches[0].clientY;
+        isDragging = true;
+        startX = e.touches[0].clientX - currentX;
+        startY = e.touches[0].clientY - currentY;
+    }
+});
+
+container.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && touchStartDistance > 0) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        const oldZoom = currentZoom;
+        const scale = distance / touchStartDistance;
+        currentZoom = Math.min(Math.max(currentZoom * scale, 1), 3);
+        touchStartDistance = distance;
+        
+        // Adjust position when pinch zooming
+        const rect = container.getBoundingClientRect();
+        const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+        const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+        
+        const zoomScale = currentZoom / oldZoom;
+        currentX = centerX - (centerX - currentX) * zoomScale;
+        currentY = centerY - (centerY - currentY) * zoomScale;
+        
+        updateTransform();
+    } else if (isDragging && e.touches.length === 1) {
+        e.preventDefault();
+        currentX = e.touches[0].clientX - startX;
+        currentY = e.touches[0].clientY - startY;
+        updateTransform();
+    }
+});
+
+container.addEventListener('touchend', () => {
+    isDragging = false;
+    touchStartDistance = 0;
+});
+
+// Modal close on background click
+document.getElementById('boothModal').addEventListener('click', (e) => {
+    if (e.target.id === 'boothModal') closeModal();
+});
+
+// Initialize
+window.addEventListener('load', () => {
+    renderBooths();
+    updateTransform();
+});
+window.addEventListener('resize', () => {
+    renderBooths();
+    updateTransform();
+});
+    </script>
+</body>
+</html>
